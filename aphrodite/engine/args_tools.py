@@ -64,7 +64,11 @@ T = TypeVar("T")
 TypeHint = Union[type[Any], object]
 TypeHintT = Union[type[T], object]
 
-
+def nullable_str(val: str):
+    if not val or val == "None":
+        return None
+    return val
+    
 def parse_type(return_type: Callable[[str], T]) -> Callable[[str], T]:
 
     def _parse_type(val: str) -> T:

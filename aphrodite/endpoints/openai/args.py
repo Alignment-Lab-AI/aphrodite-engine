@@ -58,6 +58,25 @@ class LoRAParserAction(argparse.Action):
                     )
         setattr(namespace, self.dest, lora_list)
 
+class PromptAdapterParserAction(argparse.Action):
+
+    def __call__(
+        self,
+        parser: argparse.ArgumentParser,
+        namespace: argparse.Namespace,
+        values: Optional[Union[str, Sequence[str]]],
+        option_string: Optional[str] = None,
+    ):
+        if values is None:
+            values = []
+        if isinstance(values, str):
+            raise TypeError("Expected values to be a list")
+
+        adapter_list: list[PromptAdapterPath] = []
+        for item in values:
+            name, path = item.split('=')
+            adapter_list.append(PromptAdapterPath(name, path))
+        setattr(namespace, self.dest, adapter_list)
 
 @config
 @dataclass

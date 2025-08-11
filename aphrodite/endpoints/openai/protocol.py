@@ -197,6 +197,16 @@ class LogitsProcessorConstructor(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
+class ChatCompletionAudioParam(BaseModel):
+    format: Literal["wav", "mp3", "flac", "opus", "pcm16"] = "wav"
+    voice: Literal["alloy", "ash", "ballad", "coral", "echo", "sage",
+                   "shimmer", "verse"] = "alloy"
+    audio_chunk_size: Optional[int] = None
+    audio_chunk_overlap_size: Optional[int] = None
+
+
+ChatCompletionModality = Literal["text", "audio"]
+
 
 LogitsProcessors = list[Union[str, LogitsProcessorConstructor]]
 
@@ -457,6 +467,8 @@ class ChatCompletionRequest(OpenAIBaseModel):
         validation_alias=AliasChoices("sampler_priority", "sampler_order"))
     allowed_token_ids: Optional[list[int]] = None
     bad_words: list[str] = Field(default_factory=list)
+    audio: Optional[ChatCompletionAudioParam] = None
+
     # --8<-- [end:chat-completion-sampling-params]
 
     # doc: begin-chat-completion-extra-params
@@ -1797,6 +1809,13 @@ class ExtractedToolCallInformation(BaseModel):
     content: Optional[str] = None
 
 
+class ChatCompletionAudio(BaseModel):
+    id: str
+    data: str
+    expires_at: int
+    transcript: str
+
+
 class ChatMessage(OpenAIBaseModel):
     role: str
     content: Optional[str] = None
@@ -1805,6 +1824,7 @@ class ChatMessage(OpenAIBaseModel):
     audio: Optional[OpenAIChatCompletionAudio] = None
     function_call: Optional[FunctionCall] = None
     tool_calls: list[ToolCall] = Field(default_factory=list)
+    audio: Optional[ChatCompletionAudio] = None
 
     # Aphrodite-specific fields that are not in OpenAI spec
     reasoning_content: Optional[str] = None
@@ -1859,6 +1879,7 @@ class DeltaMessage(OpenAIBaseModel):
     content: Optional[str] = None
     reasoning_content: Optional[str] = None
     tool_calls: list[DeltaToolCall] = Field(default_factory=list)
+    audio: Optional[ChatCompletionAudio] = None
 
 
 class ChatCompletionResponseStreamChoice(OpenAIBaseModel):
@@ -2811,6 +2832,49 @@ AnthropicStreamEvent = Union[
     AnthropicError
 ]
 
+class AudioSpeechRequest(OpenAIBaseModel):
+    model: str
+    """ The model to use for the audio speech request. """
+
+    input: str
+    """ The input to the audio speech request. """
+
+    voice: str
+    """ The voice to use for the audio speech request. """
+
+    speed: float = 1.0
+    """ The speed of the audio speech request. """
+
+    temperature: float = 1.0
+    """ The temperature of the audio speech request. """
+
+    top_p: float = 0.95
+    """ The top p of the audio speech request. """
+
+    top_k: int = 50
+    """ The top k of the audio speech request. """
+
+    response_format: Literal["wav", "mp3", "pcm"] = "pcm"
+    """ The response format of the audio speech request. """
+
+    stop: Optional[list[str]] = None
+
+    max_tokens: Optional[int] = None
+
+    audio_chunk_size: Optional[int] = None
+    """ The size of the audio chunk """
+
+    audio_chunk_overlap_size: Optional[int] = None
+    """ The overlap size of the audio chunk """
+
+    def to_sampling_params(self) -> SamplingParams:
+        return SamplingParams.from_optional(
+            temperature=self.temperature,
+            top_p=self.top_p,
+            top_k=self.top_k,
+            stop=['<|eot_id|>', '<|end_of_text|>', '<|audio_eos|>'],
+            max_tokens=self.max_tokens,
+            output_kind=RequestOutputKind.DELTA)
 
 # ========== KoboldAI ========== #
 
